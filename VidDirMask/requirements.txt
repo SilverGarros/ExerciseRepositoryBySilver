@@ -1,0 +1,4 @@
+gradio
+moviepy
+pydub
+pytorch
