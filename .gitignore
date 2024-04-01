@@ -1,3 +1,5 @@
 /FaceRecognition/target
 /FaceRecognition/.idea
 /.idea/
+/FaceRecognition/src/main/resources/lib/opencv/opencv-490.jar
+/FaceRecognition/src/main/resources/lib/opencv/opencv_java490.dll
