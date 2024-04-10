@@ -1,0 +1,67 @@
+(1159, '謝謝瀋陽皇朝萬鑫酒店的感動，[哈哈]昨晚喝開心了再見，啟程去台中！', {'locs': [{'original': '北京', 'replacement': '台中'}], 'pers': []})
+
+(1159, '謝謝瀋陽皇朝萬鑫酒店的感動，[哈哈]昨晚喝開心了再見，啟程去云浮！', {'locs': [{'original': '怀化', 'replacement': '云浮'}], 'pers': []})
+
+class MakeDataset(Dataset):
+
+  def __init__(self):
+
+​    self.data = pd.read_csv('data.csv')
+
+​    self.locs = open('loc.txt', 'r').read().split('\n')
+
+​    self.pers = open('per.txt', 'r').read().split('\n')
+
+  def __getitem__(self, item):
+
+​    text_id, text = self.data.iloc[item]['text_id'], self.data.iloc[item]['text']
+
+​    text, aug_info = self.augment(text)
+
+​    self.data.loc[item, 'text'] = text
+
+​    self.data.to_csv('data.csv', index=False)  # 更新数据并写回 CSV 文件
+
+​    return text_id, text, aug_info
+
+  def __len__(self):
+
+​    return len(self.data) if self.data is not None else 0
+
+  def augment(self, text):
+
+​    aug_info = {'locs': [], 'pers': []}
+
+​    \# TODO
+
+​    replace_word = None
+
+​    \# 寻找并替换地名
+
+​    for loc in self.locs :
+
+​      if loc in text and loc != replace_word :
+
+​        replacement = random.choice(self.locs)
+
+​        text = text.replace(loc, replacement)
+
+​        aug_info['locs'].append({'original': loc, 'replacement': replacement})
+
+​        replace_word = replacement
+
+​    \# 寻找并替换家庭称谓词
+
+​    for per in self.pers:
+
+​      if per in text and per != replace_word:
+
+​        replacement = random.choice(self.pers)
+
+​        text = text.replace(per, replacement)
+
+​        aug_info['pers'].append({'original': per, 'replacement': replacement})
+
+​        replace_word = replacement
+
+​    return text, aug_info
