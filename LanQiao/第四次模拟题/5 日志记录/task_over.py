@@ -1,43 +1,3 @@
-## 文本分类模型训练过程的日志记录
-
-#### 介绍
-
-为了支撑某新媒体平台的自动化和智能化，你们研发小组正在进行一套文本分类模型的训练。在文本分类模型的训练过程中，实时监控模型的性能至关重要，可以通过观察模型在训练和验证阶段的表现来及时做出调整。所以，在本任务中，你们需要改进已有的模型训练代码，增加模型性能监控和日志记录的功能，确保每个 epoch 后的各项指标（如准确率、召回率、F1 值等）被记录并保存。
-
-#### 准备
-
-开始答题前，请确认 `/home/project` 目录下包含以下文件：
-
-- text_classify_training_data.pkl
-- task.py
-- example.log
-
-其中：
-
-- `text_classify_training_data.pkl`，是本任务提供的数据集，包含已经特征化的文本与其对应的标签。
-- `task.py`，是你后续答题过程中编写代码的地方。
-- `example.log`，是本任务提供的日志文件样例。
-
-#### 目标
-
-请在 `task.py` 文件中根据以下要求编写代码。
-
-**1. 指标计算**
-
-- 完善 `evaluate()` 函数，使其可以正确计算验证集上的损失、精度、精确率、召回率与 F1 值，并返回这些指标的值。
-
-**2. 日志记录**
-
-- 在 `task.py` 文件同级目录下生成一个名为 `training.log` 的日志文件。
-- 在第 3×�−23×*N*−2 行记录当前训练周期轮数，�*N* 为正整数。
-- 在第 3×�−13×*N*−1 行记录当前训练集上的损失值，保留 3 位小数。
-- 在第 3×�3×*N* 行记录当前验证集上的损失、精度、精确率、召回率与 F1 值，使用 `|` 符号隔开，保留 3 位小数。
-
-基于以下模型训练的代码，计算目标中需要的数据，并补充日志记录的功能。执行 `run()` 函数后，确保输出的日志文件 `training.log` 中的内容与格式正确。
-
-> 提示：点击代码块右上方的 `copy` 按钮，将代码完整复制到右侧环境中后，并在 #task-start 和 #task-end 区域内编写代码。
-
-```python
 #task-start
 import pickle
 import random
@@ -48,6 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset, random_split
 from tqdm import trange
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 
 SEED = 42
@@ -105,16 +66,32 @@ def train(model, iterator, criterion, optimizer):
 def evaluate(model, iterator, criterion):
     model.eval()
     total_loss = 0
-    
+    total_correct = 0
+    total_examples = 0
+    total_predicted_positive = 0
+    total_actual_positive = 0
+    total_true_positive = 0   
     with torch.no_grad():
         for text, label in iterator:
             outputs = model(text.transpose(0, 1))
             loss = criterion(outputs, label)
             total_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
+###
+            total_correct += (predicted == label).sum().item()
+            total_examples += label.size(0)
+            total_predicted_positive += predicted.sum().item()
+            total_actual_positive += label.sum().item()
+            total_true_positive += (predicted * label).sum().item()
 
+    accuracy = total_correct / total_examples
+    precision = total_true_positive / total_predicted_positive
+    recall = total_true_positive / total_actual_positive
+    f1 = 2 * precision * recall / (precision + recall)
+###
     return total_loss / len(iterator), accuracy, precision, recall, f1
 
+logging.basicConfig(filename='training.log', filemode='a',level=logging.INFO, format='%(message)s')
 def run():
     model = TextClassifier()
     train_loader, val_loader = get_data_loaders()
@@ -126,24 +103,17 @@ def run():
     for epoch in trange(NUM_EPOCHS):
         train_loss = train(model, train_loader, criterion, optimizer)
         val_loss, val_accuracy, precision, recall, f1 = evaluate(model, val_loader, criterion)
+# 按照如下格式记录
+# Epoch: 1
+# Train Loss: 1.507
+# Val Loss: 0.814 | Val Accuracy: 50.00% | Precision: 0.438 | Recall: 0.875 | F1: 0.583
+
+        logging.info(f'Epoch: {epoch+1}')
+        logging.info(f'Train Loss: {train_loss:.3f}')
+        logging.info(f'Val Loss: {val_loss:.3f} | Val Accuracy: {val_accuracy*100:.2f}% | Precision: {precision:.3f} | Recall: {recall:.3f} | F1: {f1:.3f}')
 
     torch.save(model.state_dict(), 'model.pt')
 
 if __name__ == '__main__':
     run()
 #task-end
-```
-
-#### 规定
-
-- 切勿删除以上代码块中的任何字符，以免造成判题不通过。
-- 切勿修改任务中默认提供的文件名称、函数名称等，以免造成判题不通过。
-
-#### 判分标准
-
-- 实现目标，该题得 15 分；
-- 未实现目标，该题得 0 分。
-
-> 总通过次数: 32 | 总提交次数: 53 | 通过率: 60.4%
->
-> 难度: 中等  标签: 分类问题, 深度学习, Pytorch
